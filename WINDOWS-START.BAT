@@ -15,7 +15,6 @@ docker cp %CONTAINER%:/windows/unison-fsmonitor.exe .
 @REM TODO: PUSH . TO CONTAINER, TO MAKE SURE ANY LOCAL CUSTOMIZATIONS WIN?
 
 @set IGNORE=
-@set IGNORE=%IGNORE% -ignore "Path .devsync.yml"
 @set IGNORE=%IGNORE% -ignore "Path Dockerfile"
 @set IGNORE=%IGNORE% -ignore "Path Vagrantfile"
 @set IGNORE=%IGNORE% -ignore "Path .vagrant"
@@ -42,8 +41,10 @@ docker cp %CONTAINER%:/windows/unison-fsmonitor.exe .
 @set IGNORE=%IGNORE% -ignore "Path MAC-OSX-START.sh"
 @set IGNORE=%IGNORE% -ignore "Path MAC-OSX-STOP.sh"
 @set IGNORE=%IGNORE% -ignore "Path MAC-OSX-SHELL.sh"
-@rem Ignore vim swamp files.
 @set IGNORE=%IGNORE% -ignore "Name {.*.swp}"
+@set IGNORE=%IGNORE% -ignore "Name {.unison.*}"
+
+@set UNISONARGS=. socket://localhost:5000//magento2 -auto -batch %IGNORE%
 
 @echo *************************************************************************
 @echo **** PLEASE BE PATIENT: This can take a few minutes on first startup ****
@@ -52,7 +53,12 @@ docker cp %CONTAINER%:/windows/unison-fsmonitor.exe .
 @rem Give container a chance to start up so Unison can connect.
 timeout 5
 
-@echo Starting Unison bi-directional file synchronization process.
-.\unison . socket://localhost:5000//magento2 -auto -repeat watch -batch %IGNORE%
+@rem Run first in silent mode so it does not list out EVERY filename on screen.
+@echo **** Performing an initial sync (quiet mode) ****
+.\unison %UNISONARGS% -silent >NUL:
+
+@rem Then run in watch mode with more verbosity so you can see it working.
+@echo **** Entering file watch mode ****
+.\unison %UNISONARGS% -repeat watch
 
 pause
