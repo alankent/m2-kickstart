@@ -1,18 +1,26 @@
 
+if not defined SYNC_PROJECT set SYNC_PROJECT=m2-blank
+if not defined SYNC_CONTAINER set SYNC_CONTAINER=alankent/m2-blank
+
+SETLOCAL
+
 @rem Start up a Docker container, then sync files between local file system
 @rem and the container.
 
 
-@set CONTAINER=m2-luma
+@if not defined SYNC_HTTP_PORT set SYNC_HTTP_PORT=80
+@if not defined SYNC_BROWSERSYNC_PORT set SYNC_BROWSERSYNC_PORT=3000
+@if not defined SYNC_BROWSERSYNCADMIN_PORT set SYNC_BROWSERSYNCADMIN_PORT=3001
+@if not defined SYNC_UNISON_PORT set SYNC_UNISON_PORT=5000
+@if not defined SYNC_SSH_PORT set SYNC_SSH_PORT=22
 
-docker run -d -p 5000:5000 -p 22:22 -p 80:80 -p 3000:3000 -p 3001:3001 --name m2-luma alankent/%CONTAINER%
+docker run -d -p 80:%SYNC_HTTP_PORT% -p 3000:%SYNC_BROWSERSYNC_PORT% -p 3001:%SYNC_BROWSERSYNCADMIN_PORT% -p 5000:%SYNC_UNISON_PORT% -p 22:%SYNC_SSH_PORT% --name %SYNC_PROJECT% %SYNC_CONTAINER%
 
 rem Extracting binaries from container to make sure we have compatible version.
-docker cp %CONTAINER%:/windows/unison.exe .
-docker cp %CONTAINER%:/windows/unison-fsmonitor.exe .
+docker cp %SYNC_PROJECT%:/windows/unison.exe .
+docker cp %SYNC_PROJECT%:/windows/unison-fsmonitor.exe .
 
 @REM TODO: SYNC ~/.composer DIRECTORY TO PRIME THE CACHE IN THE CONTAINER?
-@REM TODO: PUSH src TO CONTAINER FIRST TO MAKE SURE LOCAL CUSTOMIZATIONS WIN?
 
 @set IGNORE=
 
@@ -28,6 +36,9 @@ docker cp %CONTAINER%:/windows/unison-fsmonitor.exe .
 @set IGNORE=%IGNORE% -ignore "Path app/etc/env.php"
 
 @rem Other files not worth pushing to the site
+@set IGNORE=%IGNORE% -ignore "Path WINDOWS-START.BAT"
+@set IGNORE=%IGNORE% -ignore "Path WINDOWS-STOP.BAT"
+@set IGNORE=%IGNORE% -ignore "Path WINDOWS-SHELL.BAT"
 @set IGNORE=%IGNORE% -ignore "Path Dockerfile"
 @set IGNORE=%IGNORE% -ignore "Path Vagrantfile"
 @set IGNORE=%IGNORE% -ignore "Path .vagrant"
@@ -39,16 +50,27 @@ docker cp %CONTAINER%:/windows/unison-fsmonitor.exe .
 @set IGNORE=%IGNORE% -ignore "Name {.*.swp}"
 @set IGNORE=%IGNORE% -ignore "Name {.unison.*}"
 
-@set UNISONARGS=src socket://localhost:5000//magento2 -auto -batch %IGNORE%
+@set LOCAL_ROOT=.
+@set REMOTE_ROOT=socket://localhost:%SYNC_UNISON_PORT%//magento2 
+@set UNISONARGS=%LOCAL_ROOT% %REMOTE_ROOT% -prefer %LOCAL_ROOT% -preferpartial "Path var -> %REMOTE_ROOT%" -auto -batch %IGNORE%
 
 rem *************************************************************************
 rem **** PLEASE BE PATIENT: This can take a few minutes on first startup ****
 rem *************************************************************************
 
 rem Give container a chance to start up so Unison can connect.
-timeout 5
+set loopcount=100
+:loop
+    rem Is Unison ready in container yet?
+    .\unison %LOCAL_ROOT% %REMOTE_ROOT% -batch -auto -testserver
+    if NOT ERRORLEVEL 1 goto exitloop
+    timeout 2
+    @set /a loopcount=loopcount-1
+    @if %loopcount%==0 goto exitloop
+    @goto loop
+:exitloop
 
-rem **** Performing an initial sync (faster quiet mode) ****
+rem **** Pulling files from container (faster quiet mode) ****
 .\unison %UNISONARGS% -silent >NUL:
 
 rem **** Entering file watch mode ****
