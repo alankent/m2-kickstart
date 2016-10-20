@@ -1,6 +1,5 @@
 
 if not defined SYNC_PROJECT set SYNC_PROJECT=m2-blank
-if not defined SYNC_CONTAINER set SYNC_CONTAINER=alankent/m2-blank
 
 SETLOCAL
 
@@ -8,19 +7,18 @@ SETLOCAL
 @rem and the container.
 
 
-@if not defined SYNC_HTTP_PORT set SYNC_HTTP_PORT=80
-@if not defined SYNC_BROWSERSYNC_PORT set SYNC_BROWSERSYNC_PORT=3000
-@if not defined SYNC_BROWSERSYNCADMIN_PORT set SYNC_BROWSERSYNCADMIN_PORT=3001
-@if not defined SYNC_UNISON_PORT set SYNC_UNISON_PORT=5000
-@if not defined SYNC_SSH_PORT set SYNC_SSH_PORT=22
+@set SYNC_CONTAINER=alankent/m2-blank
+@set SYNC_HTTP_PORT=80
+@set SYNC_BROWSERSYNC_PORT=3000
+@set SYNC_BROWSERSYNCADMIN_PORT=3001
+@set SYNC_UNISON_PORT=5000
+@set SYNC_SSH_PORT=22
 
 docker run -d -p 80:%SYNC_HTTP_PORT% -p 3000:%SYNC_BROWSERSYNC_PORT% -p 3001:%SYNC_BROWSERSYNCADMIN_PORT% -p 5000:%SYNC_UNISON_PORT% -p 22:%SYNC_SSH_PORT% --name %SYNC_PROJECT% %SYNC_CONTAINER%
 
 rem Extracting binaries from container to make sure we have compatible version.
 docker cp %SYNC_PROJECT%:/windows/unison.exe .
 docker cp %SYNC_PROJECT%:/windows/unison-fsmonitor.exe .
-
-@REM TODO: SYNC ~/.composer DIRECTORY TO PRIME THE CACHE IN THE CONTAINER?
 
 @set IGNORE=
 
@@ -35,7 +33,7 @@ docker cp %SYNC_PROJECT%:/windows/unison-fsmonitor.exe .
 @set IGNORE=%IGNORE% -ignore "Path pub/static"
 @set IGNORE=%IGNORE% -ignore "Path app/etc/env.php"
 
-@rem Other files not worth pushing to the site
+@rem Other files not worth pushing to the container.
 @set IGNORE=%IGNORE% -ignore "Path WINDOWS-START.BAT"
 @set IGNORE=%IGNORE% -ignore "Path WINDOWS-STOP.BAT"
 @set IGNORE=%IGNORE% -ignore "Path WINDOWS-SHELL.BAT"
@@ -52,6 +50,7 @@ docker cp %SYNC_PROJECT%:/windows/unison-fsmonitor.exe .
 
 @set LOCAL_ROOT=.
 @set REMOTE_ROOT=socket://localhost:%SYNC_UNISON_PORT%//magento2 
+
 @set UNISONARGS=%LOCAL_ROOT% %REMOTE_ROOT% -prefer %LOCAL_ROOT% -preferpartial "Path var -> %REMOTE_ROOT%" -auto -batch %IGNORE%
 
 rem *************************************************************************
