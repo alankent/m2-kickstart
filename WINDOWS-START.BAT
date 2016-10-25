@@ -1,18 +1,10 @@
 
-if not defined SYNC_PROJECT set SYNC_PROJECT=m2-blank
+call WINDOWS-SETTINGS.BAT
 
 SETLOCAL
 
 @rem Start up a Docker container, then sync files between local file system
 @rem and the container.
-
-
-@set SYNC_CONTAINER=alankent/m2-blank
-@set SYNC_HTTP_PORT=80
-@set SYNC_BROWSERSYNC_PORT=3000
-@set SYNC_BROWSERSYNCADMIN_PORT=3001
-@set SYNC_UNISON_PORT=5000
-@set SYNC_SSH_PORT=22
 
 docker run -d -p 80:%SYNC_HTTP_PORT% -p 3000:%SYNC_BROWSERSYNC_PORT% -p 3001:%SYNC_BROWSERSYNCADMIN_PORT% -p 5000:%SYNC_UNISON_PORT% -p 22:%SYNC_SSH_PORT% --name %SYNC_PROJECT% %SYNC_CONTAINER%
 

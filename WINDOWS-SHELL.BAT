@@ -1,5 +1,3 @@
-if not defined SYNC_PROJECT set SYNC_PROJECT=m2-blank
-
+call WINDOWS-SETTINGS.BAT
 docker exec -it %SYNC_PROJECT% bash
-
 pause
